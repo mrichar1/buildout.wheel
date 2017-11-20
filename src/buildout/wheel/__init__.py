@@ -1,6 +1,7 @@
 import logging
 import os
 import os.path
+import re
 import shutil
 import sys
 import pkg_resources
@@ -19,6 +20,8 @@ assert os.path.isfile(NAMESPACE_STUB_PATH)
 
 
 orig_distros_for_location = setuptools.package_index.distros_for_location
+
+filters = {}
 
 
 def unpack_wheel(spec, dest):
@@ -126,18 +129,38 @@ def distros_for_location(location, basename, metadata=None):
     Here we override setuptools to give wheels a chance.
     """
     if basename.endswith('.whl'):
-        wi = WheelInstaller(basename)
-        if wi.compatible:
-            # It's a match. Treat it as a binary
-            # distro. Buildout will sort it out.
-            return [wi.distribution(location, metadata)]
-        # Not a match, short circuit:
-        return ()
+        # default allow
+        allow_install = True
+        wl_locs = [location for x in filters['whitelist_locations'] if x and re.search(x, location)]
+        bl_locs = [location for x in filters['blacklist_locations'] if x and re.search(x, location)]
+        wl_names = [basename for x in filters['whitelist_names'] if x and re.search(x, basename)]
+        bl_names = [basename for x in filters['blacklist_names'] if x and re.search(x, basename)]
+        # If whitelists are defined, or loc/name is blacklisted, deny
+        if filters['whitelist_locations'] or filters['whitelist_names'] or bl_locs or bl_names:
+            allow_install = False
+        # if loc/name is in a whitelist, allow
+        if (wl_locs and not bl_names) or wl_names:
+            allow_install = True
+        if allow_install:
+            wi = WheelInstaller(basename)
+            if wi.compatible:
+                # It's a match. Treat it as a binary
+                # distro. Buildout will sort it out.
+                return [wi.distribution(location, metadata)]
+            # Not a match, short circuit:
+            return ()
     return orig_distros_for_location(location, basename, metadata=metadata)
 
 
 def load(buildout):
-    setuptools.package_index.distros_for_location = distros_for_location
+    config = buildout.get('buildout', None)
+    if config:
+        # Options may be comma or white-space separated
+        filters['whitelist_names'] = config.get('wheel-whitelist-names', '').replace(',', ' ').split()
+        filters['blacklist_names'] = config.get('wheel-blacklist-names', '').replace(',', ' ').split()
+        filters['whitelist_locations'] = config.get('wheel-whitelist-locations', '').replace(',', ' ').split()
+        filters['blacklist_locations'] = config.get('wheel-blacklist-locations', '').replace(',', ' ').split()
+        setuptools.package_index.distros_for_location = distros_for_location
     buildout.old_unpack_wheel = zc.buildout.easy_install.UNPACKERS.get('.whl')
     zc.buildout.easy_install.UNPACKERS['.whl'] = unpack_wheel
     logger.debug('Patched in wheel support')
