@@ -21,7 +21,10 @@ assert os.path.isfile(NAMESPACE_STUB_PATH)
 
 orig_distros_for_location = setuptools.package_index.distros_for_location
 
-filters = {}
+filters = {'blacklist_names': [],
+           'whitelist_names': [],
+           'blacklist_locations': [],
+           'whitelist_locations': []}
 
 
 def unpack_wheel(spec, dest):
