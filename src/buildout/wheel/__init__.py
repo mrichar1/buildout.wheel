@@ -163,7 +163,7 @@ def load(buildout):
         filters['blacklist_names'] = config.get('wheel-blacklist-names', '').replace(',', ' ').split()
         filters['whitelist_locations'] = config.get('wheel-whitelist-locations', '').replace(',', ' ').split()
         filters['blacklist_locations'] = config.get('wheel-blacklist-locations', '').replace(',', ' ').split()
-        setuptools.package_index.distros_for_location = distros_for_location
+    setuptools.package_index.distros_for_location = distros_for_location
     buildout.old_unpack_wheel = zc.buildout.easy_install.UNPACKERS.get('.whl')
     zc.buildout.easy_install.UNPACKERS['.whl'] = unpack_wheel
     logger.debug('Patched in wheel support')

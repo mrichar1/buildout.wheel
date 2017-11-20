@@ -10,7 +10,9 @@ import zc.buildout.testing
 class Buildout(object):
     """ Object to pass into the `load()` entry point during tests
     """
-
+    @staticmethod
+    def get(value, default):
+        return None
 
 class BuildoutWheelTests(unittest.TestCase):
 
